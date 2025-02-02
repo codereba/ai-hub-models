@@ -1,0 +1,59 @@
+# ---------------------------------------------------------------------
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------------------------------------
+
+from __future__ import annotations
+
+import warnings
+
+from qai_hub_models.models._shared.deepseekr1.export import export_model
+from qai_hub_models.models.deepseekr1_quantized import MODEL_ID, Model
+from qai_hub_models.models.deepseekr1_quantized.model import (
+    NUM_LAYERS_PER_SPLIT,
+    NUM_SPLITS,
+)
+from qai_hub_models.utils.args import export_parser
+from qai_hub_models.utils.base_model import TargetRuntime
+
+DEFAULT_EXPORT_DEVICE = "Snapdragon 8 Elite QRD"
+
+ALL_COMPONENTS = [f"part_{i + 1}_of_{NUM_SPLITS}" for i in range(NUM_SPLITS)]
+
+# Each components is two sub-components linked together with shared weights
+ALL_SUB_COMPONENTS = {
+    f"part_{i + 1}_of_{NUM_SPLITS}": [
+        f"prompt_{i + 1}_of_{NUM_SPLITS}",
+        f"token_{i + 1}_of_{NUM_SPLITS}",
+    ]
+    for i in range(NUM_SPLITS)
+}
+
+
+def main():
+    warnings.filterwarnings("ignore")
+    parser = export_parser(
+        model_cls=Model,
+        supports_tflite=True,
+        supports_qnn=False,
+        supports_onnx=False,
+        default_export_device=DEFAULT_EXPORT_DEVICE,
+    )
+    parser.add_argument(
+        "--synchronous",
+        action="store_true",
+        help="Wait for each command to finish before submitting new.",
+    )
+    args = parser.parse_args()
+    export_model(
+        model_cls=Model,
+        model_name=MODEL_ID,
+        components=ALL_COMPONENTS,
+        sub_components=ALL_SUB_COMPONENTS,
+        num_layers_per_split=NUM_LAYERS_PER_SPLIT,
+        **vars(args),
+    )
+
+
+if __name__ == "__main__":
+    main()
